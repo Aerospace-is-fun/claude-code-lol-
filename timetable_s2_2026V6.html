@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S2 2026 Timetable</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+  header { background: #fff; border-bottom: 1px solid #e0e0dc; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  header .usyd { font-size: 12px; color: #888; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+  .week-bar { background: #fff; border-bottom: 1px solid #e0e0dc; padding: 0 20px; display: flex; align-items: center; gap: 0; overflow-x: auto; position: sticky; top: 53px; z-index: 150; scrollbar-width: none; }
+  .week-bar::-webkit-scrollbar { display: none; }
+  .week-tab { flex-shrink: 0; padding: 10px 14px; font-size: 12px; font-weight: 500; color: #999; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; user-select: none; }
+  .week-tab:hover { color: #555; }
+  .week-tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; font-weight: 600; }
+  .week-tab.break { color: #ccc; font-style: italic; cursor: default; }
+  .week-tab.break:hover { color: #ccc; }
+  .week-nav { display: flex; align-items: center; gap: 4px; margin-left: auto; padding-left: 12px; }
+  .week-nav button { background: none; border: 1px solid #e0e0dc; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: #666; }
+  .week-nav button:hover { background: #f5f5f3; }
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 97px); }
+  .sidebar { background: #fff; border-right: 1px solid #e0e0dc; padding: 20px 16px; overflow-y: auto; }
+  .sidebar-section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+  .subject-card { border: 1px solid #e8e8e4; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .subject-header { padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none; }
+  .subject-header:hover { background: #fafaf8; }
+  .subj-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .subj-info { flex: 1; }
+  .subj-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .subj-code { font-size: 11px; color: #999; margin-top: 2px; }
+  .chevron { font-size: 12px; color: #bbb; transition: transform 0.2s; flex-shrink: 0; margin-top: 3px; }
+  .subject-card.open .chevron { transform: rotate(180deg); }
+  .class-options { display: none; border-top: 1px solid #f0f0ec; padding: 8px 12px 10px; }
+  .subject-card.open .class-options { display: block; }
+  .option-group { margin-bottom: 10px; }
+  .option-label { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+  .multi-badge { font-size: 10px; background: #f0f0ec; color: #999; padding: 1px 6px; border-radius: 4px; text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .option-btn { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left; background: none; border: 1px solid #e8e8e4; border-radius: 7px; padding: 6px 9px; font-size: 12px; cursor: pointer; margin-bottom: 4px; transition: all 0.15s; color: #444; line-height: 1.4; }
+  .option-btn:hover { border-color: #ccc; background: #fafaf8; }
+  .option-btn.selected { color: #fff; border-color: transparent; }
+  .opt-check { width: 14px; height: 14px; border: 1.5px solid #ccc; border-radius: 3px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .option-btn.selected .opt-check { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.25); }
+  .opt-body { flex: 1; }
+  .opt-time { font-weight: 600; }
+  .opt-loc { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+  .group-note { font-size: 11px; color: #bbb; margin-top: 2px; font-style: italic; }
+  .main { padding: 20px; overflow-x: auto; }
+  .week-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .week-label .wk-badge { font-size: 11px; font-weight: 500; background: #f0f0ec; color: #999; padding: 2px 8px; border-radius: 5px; }
+  .week-label .break-notice { font-size: 12px; color: #e05a2b; background: #fff3ee; padding: 2px 10px; border-radius: 5px; font-weight: 500; }
+  .grid-wrap { background: #fff; border: 1px solid #e0e0dc; border-radius: 12px; overflow: hidden; min-width: 680px; }
+  .day-header { display: grid; grid-template-columns: 54px repeat(5, 1fr); border-bottom: 1px solid #e0e0dc; }
+  .day-header > div { padding: 10px 0; text-align: center; font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .day-header > div:first-child { border-right: 1px solid #f0f0ec; }
+  .day-header .date-sub { font-size: 10px; font-weight: 400; color: #bbb; display: block; margin-top: 1px; }
+  .time-grid { display: grid; grid-template-columns: 54px repeat(5, 1fr); position: relative; }
+  .time-col { border-right: 1px solid #f0f0ec; }
+  .time-slot { height: 44px; display: flex; align-items: flex-start; justify-content: flex-end; padding-right: 8px; padding-top: 0; font-size: 11px; color: #ccc; font-variant-numeric: tabular-nums; position: relative; }
+  .time-slot.hour span { position: absolute; top: -8px; right: 8px; background: #fff; color: #888; font-weight: 600; padding: 0 4px; z-index: 2; }
+  .time-slot.hour::before { content: ""; position: absolute; top: 0; left: 0; right: 36px; border-top: 2px solid #ccc; }
+  .day-col { border-right: 1px solid #f0f0ec; position: relative; }
+  .day-col:last-child { border-right: none; }
+  .day-bg-slot { height: 44px; border-top: 1px solid #f7f7f5; }
+  .day-bg-slot.hour { border-top: 2px solid #ccc; }
+  .event-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+  .event { position: absolute; left: 3px; right: 3px; border-radius: 7px; padding: 5px 7px; font-size: 11px; line-height: 1.3; overflow: hidden; pointer-events: all; cursor: default; border: none; }
+  .event.dimmed { opacity: 0.3; }
+  .event .ev-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .event .ev-type { opacity: 0.75; font-size: 10px; margin-top: 1px; }
+  .event .ev-loc { opacity: 0.65; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-note { font-size: 11px; color: #bbb; margin-top: 12px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>S2 2026 Timetable</h1>
+  <div class="header-right"><span class="usyd">University of Sydney</span></div>
+</header>
+<div class="week-bar" id="week-bar">
+  <div class="week-nav"><button onclick="shiftWeek(-1)">◀</button><button onclick="shiftWeek(1)">▶</button></div>
+</div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section-title">Subjects</div>
+    <div id="subject-list"></div>
+    <p class="sidebar-note"><strong>Radio options</strong> — pick one slot per required group.<br><strong>Checkboxes</strong> — tick which optional tuts you'll attend this week.</p>
+  </aside>
+  <main class="main">
+    <div class="week-label" id="week-label"></div>
+    <div class="grid-wrap">
+      <div class="day-header" id="day-header">
+        <div></div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div>
+      </div>
+      <div class="time-grid" id="time-grid">
+        <div class="time-col" id="time-col"></div>
+        <div class="day-col" id="col-Mon"><div class="event-layer" id="layer-Mon"></div></div>
+        <div class="day-col" id="col-Tue"><div class="event-layer" id="layer-Tue"></div></div>
+        <div class="day-col" id="col-Wed"><div class="event-layer" id="layer-Wed"></div></div>
+        <div class="day-col" id="col-Thu"><div class="event-layer" id="layer-Thu"></div></div>
+        <div class="day-col" id="col-Fri"><div class="event-layer" id="layer-Fri"></div></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const START_HOUR = 8, END_HOUR = 19, SLOT_H = 44;
+const TOTAL_SLOTS = (END_HOUR - START_HOUR) * 2;
+const DAYS = ["Mon","Tue","Wed","Thu","Fri"];
+function addDays(dt, n) { const d = new Date(dt); d.setDate(d.getDate() + n); return d; }
+function fmtDate(dt) { return dt.toLocaleDateString("en-AU", { day: "numeric", month: "short" }); }
+
+const SEM_START = new Date(2026, 7, 3);
+const SEM_END   = new Date(2026, 10, 2);
+const BREAK_WEEK = new Date(2026, 8, 28);
+
+const WEEKS = [];
+let wk = new Date(SEM_START);
+let wkNum = 1;
+while (wk <= SEM_END) {
+  const isBreak = wk.getTime() === BREAK_WEEK.getTime();
+  WEEKS.push({ monday: new Date(wk), label: isBreak ? "Mid-sem break" : `Week ${wkNum}`, isBreak });
+  if (!isBreak) wkNum++;
+  wk = addDays(wk, 7);
+}
+
+const SUBJECTS = [
+  { code: "AERO2460", name: "Aerospace Design 1", color: "#4F6EF7",
+    groups: [
+      { type: "Lecture 1", mode: "radio", options: [{ id:"a24-l1", label:"Wed 09:00", day:"Wed", time:"09:00", dur:2, loc:"Chemistry LT 2", dates:[{s:"5/8",e:"23/9"},{s:"7/10",e:"4/11"}] }] },
+      { type: "Lecture 2", mode: "radio", options: [{ id:"a24-l2", label:"Thu 08:00", day:"Thu", time:"08:00", dur:1, loc:"TBA", dates:[{s:"6/8",e:"24/9"},{s:"8/10",e:"5/11"}] }] },
+      { type: "Tutorial", mode: "radio", note: "Pick one — both run weekly", options: [
+        { id:"a24-t1", label:"Fri 12:00 (Tut 01)", day:"Fri", time:"12:00", dur:2, loc:"Mech Eng Comp Lab S345", dates:[{s:"7/8",e:"25/9"},{s:"9/10",e:"6/11"}] },
+        { id:"a24-t2", label:"Fri 14:00 (Tut 02)", day:"Fri", time:"14:00", dur:2, loc:"Mech Eng Comp Lab S345", dates:[{s:"7/8",e:"25/9"},{s:"9/10",e:"6/11"}] }
+      ] }
+    ] },
+  { code: "AERO2705", name: "Space Engineering 1", color: "#9B51E0",
+    groups: [
+      { type: "Lecture", mode: "radio", options: [{ id:"a27-l", label:"Mon 09:00", day:"Mon", time:"09:00", dur:2, loc:"Eastern Ave LT 315", dates:[{s:"3/8",e:"21/9"},{s:"12/10",e:"2/11"}] }] },
+      { type: "Tutorial", mode: "radio", options: [{ id:"a27-t", label:"Thu 13:00", day:"Thu", time:"13:00", dur:2, loc:"Mech Eng Comp Lab S345", dates:[{s:"6/8",e:"24/9"},{s:"8/10",e:"5/11"}] }] }
+    ] },
+  { code: "AMME2200", name: "Introductory Thermofluids", color: "#E05A2B",
+    groups: [
+      { type: "Lecture 1", mode: "radio", options: [{ id:"a22-l1", label:"Tue 11:00", day:"Tue", time:"11:00", dur:1, loc:"PNR LT 302", dates:[{s:"4/8",e:"22/9"},{s:"6/10",e:"3/11"}] }] },
+      { type: "Lecture 2", mode: "radio", options: [{ id:"a22-l2", label:"Fri 11:00", day:"Fri", time:"11:00", dur:1, loc:"Merewether LT 131", dates:[{s:"7/8",e:"28/8"},{s:"11/9",e:"25/9"},{s:"16/10",e:"30/10"}] }] },
+      { type: "Tutorial P1", mode: "checkbox", note: "Tick which you'll attend", options: [
+        { id:"a22-t01p1", label:"Tue 12:00", day:"Tue", time:"12:00", dur:1, loc:"Aero Eng N311", dates:[{s:"11/8",e:"22/9"},{s:"6/10",e:"3/11"}] },
+        { id:"a22-t02p1", label:"Tue 13:00", day:"Tue", time:"13:00", dur:1, loc:"Mech Eng S227", dates:[{s:"11/8",e:"22/9"},{s:"6/10",e:"3/11"}] },
+        { id:"a22-t03p1", label:"Tue 16:00", day:"Tue", time:"16:00", dur:1, loc:"Mech Eng S226", dates:[{s:"11/8",e:"22/9"},{s:"6/10",e:"3/11"}] },
+        { id:"a22-t06p1", label:"Wed 08:00", day:"Wed", time:"08:00", dur:1, loc:"Mech Eng S227", dates:[{s:"12/8",e:"23/9"},{s:"7/10",e:"4/11"}] },
+        { id:"a22-t07p1", label:"Wed 14:00", day:"Wed", time:"14:00", dur:1, loc:"BHB 1080", dates:[{s:"12/8",e:"23/9"},{s:"7/10",e:"4/11"}] },
+        { id:"a22-t09p1", label:"Wed 15:00", day:"Wed", time:"15:00", dur:1, loc:"Civil Eng S311", dates:[{s:"12/8",e:"23/9"},{s:"7/10",e:"4/11"}] },
+        { id:"a22-t10p1", label:"Wed 16:00", day:"Wed", time:"16:00", dur:1, loc:"Chem Eng LT 201", dates:[{s:"12/8",e:"23/9"},{s:"7/10",e:"4/11"}] }
+      ] },
+      { type: "Tutorial P2", mode: "checkbox", note: "Tick which you'll attend", options: [
+        { id:"a22-t01p2", label:"Thu 08:00", day:"Thu", time:"08:00", dur:1, loc:"Mech Eng S227", dates:[{s:"13/8",e:"24/9"},{s:"8/10",e:"5/11"}] },
+        { id:"a22-t02p2", label:"Thu 09:00", day:"Thu", time:"09:00", dur:1, loc:"Mech Eng S227", dates:[{s:"13/8",e:"24/9"},{s:"8/10",e:"5/11"}] },
+        { id:"a22-t03p2", label:"Thu 10:00", day:"Thu", time:"10:00", dur:1, loc:"Aero Eng N214", dates:[{s:"13/8",e:"24/9"},{s:"8/10",e:"5/11"}] },
+        { id:"a22-t06p2", label:"Fri 09:00", day:"Fri", time:"09:00", dur:1, loc:"BHB 2240", dates:[{s:"14/8",e:"25/9"},{s:"9/10",e:"6/11"}] },
+        { id:"a22-t09p2", label:"Fri 10:00", day:"Fri", time:"10:00", dur:1, loc:"Storie Dixson 332", dates:[{s:"14/8",e:"25/9"},{s:"9/10",e:"6/11"}] },
+        { id:"a22-t10p2", label:"Fri 13:00", day:"Fri", time:"13:00", dur:1, loc:"Civil Eng S311", dates:[{s:"14/8",e:"25/9"},{s:"9/10",e:"6/11"}] }
+      ] }
+    ] },
+  { code: "AMME2301", name: "Mechanics of Solids", color: "#2BA89A",
+    groups: [
+      { type: "Lecture 1", mode: "radio", options: [{ id:"a23-l1", label:"Tue 14:00", day:"Tue", time:"14:00", dur:2, loc:"BHB LT B2010", dates:[{s:"4/8",e:"22/9"},{s:"6/10",e:"27/10"}] }] },
+      { type: "Lecture 2", mode: "radio", options: [{ id:"a23-l2", label:"Wed 12:00", day:"Wed", time:"12:00", dur:1, loc:"BHB LT B2010", dates:[{s:"5/8",e:"9/9"},{s:"23/9",e:"23/9"},{s:"7/10",e:"14/10"},{s:"28/10",e:"28/10"}] }] },
+      { type: "Tutorial", mode: "radio", note: "Pick your enrolled tutorial", options: [
+        { id:"a23-t01", label:"Mon 13:00 (01)", day:"Mon", time:"13:00", dur:2, loc:"Mech Eng S220", dates:[{s:"10/8",e:"21/9"},{s:"12/10",e:"2/11"}] },
+        { id:"a23-t02", label:"Mon 13:00 (02)", day:"Mon", time:"13:00", dur:2, loc:"BHB 2060", dates:[{s:"10/8",e:"21/9"},{s:"12/10",e:"2/11"}] },
+        { id:"a23-t03", label:"Tue 16:00 (03)", day:"Tue", time:"16:00", dur:2, loc:"Mech Eng S227", dates:[{s:"11/8",e:"22/9"},{s:"6/10",e:"3/11"}] },
+        { id:"a23-t04", label:"Tue 16:00 (04)", day:"Tue", time:"16:00", dur:2, loc:"Aero Eng N311", dates:[{s:"11/8",e:"22/9"},{s:"6/10",e:"3/11"}] },
+        { id:"a23-t05", label:"Wed 14:00 (05)", day:"Wed", time:"14:00", dur:2, loc:"Mech Eng S226", dates:[{s:"12/8",e:"23/9"},{s:"7/10",e:"4/11"}] },
+        { id:"a23-t06", label:"Wed 16:00 (06)", day:"Wed", time:"16:00", dur:2, loc:"BHB 3270", dates:[{s:"12/8",e:"23/9"},{s:"7/10",e:"4/11"}] },
+        { id:"a23-t08", label:"Thu 09:00 (08)", day:"Thu", time:"09:00", dur:2, loc:"Aero Eng N311", dates:[{s:"13/8",e:"24/9"},{s:"8/10",e:"5/11"}] },
+        { id:"a23-t10", label:"Thu 11:00 (10)", day:"Thu", time:"11:00", dur:2, loc:"Mech Eng S220", dates:[{s:"13/8",e:"24/9"},{s:"8/10",e:"5/11"}] },
+        { id:"a23-t11", label:"Thu 14:00 (11)", day:"Thu", time:"14:00", dur:2, loc:"Mech Eng S227", dates:[{s:"13/8",e:"24/9"},{s:"8/10",e:"5/11"}] },
+        { id:"a23-t14", label:"Fri 09:00 (14)", day:"Fri", time:"09:00", dur:2, loc:"School of IT LT", dates:[{s:"14/8",e:"25/9"},{s:"9/10",e:"6/11"}] },
+        { id:"a23-t15", label:"Fri 12:00 (15)", day:"Fri", time:"12:00", dur:2, loc:"Aero Eng N214", dates:[{s:"14/8",e:"25/9"},{s:"9/10",e:"6/11"}] },
+        { id:"a23-t16", label:"Fri 14:00 (16)", day:"Fri", time:"14:00", dur:2, loc:"Institute N296", dates:[{s:"14/8",e:"25/9"},{s:"9/10",e:"6/11"}] }
+      ] }
+    ] }
+];
+
+let currentWeekIdx = 0;
+const selected = {};
+const checked = {};
+
+function parseDate(str) { const [d, m] = str.split("/").map(Number); return new Date(2026, m - 1, d); }
+function classRunsInWeek(dates, monday) {
+  const friday = addDays(monday, 4);
+  return dates.some(({s, e}) => { const start = parseDate(s), end = parseDate(e); return start <= friday && end >= monday; });
+}
+
+function buildTimeCol() {
+  const col = document.getElementById("time-col");
+  col.innerHTML = "";
+  for (let s = 0; s < TOTAL_SLOTS; s++) {
+    const h = START_HOUR + Math.floor(s / 2);
+    const m = s % 2 === 0 ? "00" : "30";
+    const div = document.createElement("div");
+    div.className = "time-slot" + (m === "00" ? " hour" : "");
+    if (m === "00") { div.innerHTML = `<span>${String(h).padStart(2,"0")}:00</span>`; }
+    col.appendChild(div);
+  }
+}
+
+function buildDayBg() {
+  DAYS.forEach(d => {
+    const col = document.getElementById("col-" + d);
+    const layer = document.getElementById("layer-" + d);
+    col.innerHTML = "";
+    col.appendChild(layer);
+    for (let s = 0; s < TOTAL_SLOTS; s++) {
+      const div = document.createElement("div");
+      div.className = "day-bg-slot" + (s % 2 === 0 ? " hour" : "");
+      col.insertBefore(div, layer);
+    }
+  });
+}
+
+function timeToSlot(t) { const [h, m] = t.split(":").map(Number); return (h - START_HOUR) * 2 + (m >= 30 ? 1 : 0); }
+
+function renderWeekLabel() {
+  const w = WEEKS[currentWeekIdx];
+  const mon = w.monday, fri = addDays(mon, 4);
+  const lbl = document.getElementById("week-label");
+  lbl.innerHTML = `<span>${w.label}</span><span class="wk-badge">${fmtDate(mon)} – ${fmtDate(fri)}</span>${w.isBreak ? '<span class="break-notice">No classes this week</span>' : ''}`;
+  const dh = document.getElementById("day-header");
+  const cells = dh.querySelectorAll("div:not(:first-child)");
+  cells.forEach((cell, i) => {
+    const dt = addDays(mon, i);
+    const dayName = ["Mon","Tue","Wed","Thu","Fri"][i];
+    cell.innerHTML = `${dayName}<span class="date-sub">${dt.getDate()} ${dt.toLocaleDateString("en-AU",{month:"short"})}</span>`;
+  });
+}
+
+function renderEvents() {
+  const w = WEEKS[currentWeekIdx];
+  const monday = w.monday;
+  DAYS.forEach(d => { document.getElementById("layer-" + d).innerHTML = ""; });
+  if (w.isBreak) return;
+  SUBJECTS.forEach(subj => {
+    subj.groups.forEach((grp, gi) => {
+      const grpKey = subj.code + "-" + gi;
+      if (grp.mode === "radio") {
+        const optId = selected[grpKey];
+        if (!optId) return;
+        const opt = grp.options.find(o => o.id === optId);
+        if (!opt) return;
+        placeEvent(opt, subj, grp.type, classRunsInWeek(opt.dates, monday) ? "" : "dimmed");
+      } else {
+        grp.options.forEach(opt => {
+          if (!checked[opt.id]) return;
+          placeEvent(opt, subj, grp.type, classRunsInWeek(opt.dates, monday) ? "" : "dimmed");
+        });
+      }
+    });
+  });
+}
+
+function placeEvent(opt, subj, typeName, extraClass) {
+  const layer = document.getElementById("layer-" + opt.day);
+  if (!layer) return;
+  const slot = timeToSlot(opt.time);
+  const top = slot * SLOT_H + 1;
+  const height = opt.dur * 2 * SLOT_H - 3;
+  const color = subj.color;
+  const div = document.createElement("div");
+  div.className = "event" + (extraClass ? " " + extraClass : "");
+  div.style.cssText = `top:${top}px;height:${height}px;background:${color}18;border-left:3px solid ${color};`;
+  div.innerHTML = `<div class="ev-name" style="color:${color}">${subj.code}</div><div class="ev-type" style="color:${color}">${typeName}</div><div class="ev-loc" style="color:${color}">${opt.loc}</div>`;
+  layer.appendChild(div);
+}
+
+function buildSidebar() {
+  const list = document.getElementById("subject-list");
+  list.innerHTML = "";
+  SUBJECTS.forEach(subj => {
+    const card = document.createElement("div");
+    card.className = "subject-card open";
+    let optionsHTML = "";
+    subj.groups.forEach((grp, gi) => {
+      const grpKey = subj.code + "-" + gi;
+      const badgeHTML = grp.mode === "checkbox" ? `<span class="multi-badge">multi-select</span>` : "";
+      optionsHTML += `<div class="option-group" data-grpkey="${grpKey}" data-mode="${grp.mode}"><div class="option-label">${grp.type} ${badgeHTML}</div>`;
+      if (grp.note) optionsHTML += `<div class="group-note">${grp.note}</div>`;
+      grp.options.forEach(opt => {
+        optionsHTML += `<button class="option-btn" id="btn-${opt.id}" onclick="handleOption('${grpKey}','${opt.id}','${grp.mode}','${subj.color}')">
+          <div class="opt-check" id="chk-${opt.id}"></div>
+          <div class="opt-body"><div class="opt-time">${opt.label}</div><div class="opt-loc">${opt.loc}</div></div>
+        </button>`;
+      });
+      optionsHTML += `</div>`;
+    });
+    card.innerHTML = `
+      <div class="subject-header" onclick="this.parentElement.classList.toggle('open')">
+        <div class="subj-dot" style="background:${subj.color}"></div>
+        <div class="subj-info"><div class="subj-name">${subj.name}</div><div class="subj-code">${subj.code}</div></div>
+        <div class="chevron">▾</div>
+      </div>
+      <div class="class-options">${optionsHTML}</div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function handleOption(grpKey, optId, mode, color) {
+  if (mode === "radio") {
+    const grp = getGroup(grpKey);
+    grp.options.forEach(o => {
+      const btn = document.getElementById("btn-" + o.id);
+      const chk = document.getElementById("chk-" + o.id);
+      btn.classList.remove("selected"); btn.style.background = ""; chk.textContent = "";
+    });
+    if (selected[grpKey] === optId) { selected[grpKey] = null; }
+    else {
+      selected[grpKey] = optId;
+      const btn = document.getElementById("btn-" + optId);
+      const chk = document.getElementById("chk-" + optId);
+      btn.classList.add("selected"); btn.style.background = color; chk.textContent = "✓";
+    }
+  } else {
+    checked[optId] = !checked[optId];
+    const btn = document.getElementById("btn-" + optId);
+    const chk = document.getElementById("chk-" + optId);
+    if (checked[optId]) { btn.classList.add("selected"); btn.style.background = color; chk.textContent = "✓"; }
+    else { btn.classList.remove("selected"); btn.style.background = ""; chk.textContent = ""; }
+  }
+  renderEvents();
+}
+
+function getGroup(grpKey) {
+  for (const subj of SUBJECTS) {
+    for (let i = 0; i < subj.groups.length; i++) {
+      if (subj.code + "-" + i === grpKey) return subj.groups[i];
+    }
+  }
+}
+
+function buildWeekBar() {
+  const bar = document.getElementById("week-bar");
+  const nav = bar.querySelector(".week-nav");
+  WEEKS.forEach((w, i) => {
+    const tab = document.createElement("div");
+    tab.className = "week-tab" + (w.isBreak ? " break" : "") + (i === 0 ? " active" : "");
+    tab.textContent = w.isBreak ? "Break" : w.label;
+    tab.title = fmtDate(w.monday) + " – " + fmtDate(addDays(w.monday, 4));
+    tab.onclick = () => setWeek(i);
+    bar.insertBefore(tab, nav);
+  });
+}
+
+function setWeek(idx) {
+  currentWeekIdx = idx;
+  document.querySelectorAll(".week-tab").forEach((t, i) => t.classList.toggle("active", i === idx));
+  const tabs = document.querySelectorAll(".week-tab");
+  tabs[idx] && tabs[idx].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  renderWeekLabel();
+  renderEvents();
+}
+
+function shiftWeek(dir) { setWeek(Math.max(0, Math.min(WEEKS.length - 1, currentWeekIdx + dir))); }
+
+function findCurrentWeek() {
+  const today = new Date();
+  let best = 0;
+  WEEKS.forEach((w, i) => { if (w.monday <= today) best = i; });
+  return best;
+}
+
+buildTimeCol();
+buildDayBg();
+buildWeekBar();
+buildSidebar();
+currentWeekIdx = findCurrentWeek();
+setWeek(currentWeekIdx);
+</script>
+</body>
+</html>
